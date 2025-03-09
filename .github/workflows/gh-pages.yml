@@ -22,7 +22,7 @@ jobs:
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
-      - name: Detect deployment type
+      - name: Detect deployment
         uses: actions/github-script@v7
         id: detect-deployment
         with:
