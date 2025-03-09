@@ -1,12 +1,10 @@
-name: Deploy to GitHub Pages
+name: GitHub Pages Deployment
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/README.md'
+    branches: [main]
+    paths-ignore: ["**/README.md"]
 
 permissions:
   contents: write
@@ -18,58 +16,59 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    if: github.run_number != 1
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
+      - name: Detect deployment type
+        id: detect-deployment
+        run: |
+          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install and Build
+      - name: Build artifacts
+        if: steps.detect-deployment.outputs.type == 'workflow'
         run: |
           pnpm install --frozen-lockfile
           pnpm run build --public-url /${{ github.event.repository.name }}
 
-      - name: Build Project
-        run: pnpm run build --public-url /${{ github.event.repository.name }}
-
-      - name: Check GitHub Pages Source
-        id: deployment
-        run: |
-          SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
-          echo "SOURCE=$SOURCE" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Deploy GitHub Pages (Workflow Source)
-        if: env.SOURCE == 'workflow'
+  deploy-workflow:
+    name: Modern Deployment
+    needs: build
+    if: needs.build.outputs.deployment-type == 'workflow'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-      - uses: actions/deploy-pages@v4
 
-      - name: Deploy GitHub Pages (Legacy Source)
-        if: env.SOURCE == 'legacy'
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  deploy-legacy:
+    name: Legacy Deployment
+    needs: build
+    if: needs.build.outputs.deployment-type == 'legacy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          allow_empty_commit: true
           force_orphan: true
+          keep_files: false
