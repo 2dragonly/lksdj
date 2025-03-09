@@ -25,16 +25,16 @@ jobs:
       - name: Detect deployment type
         id: detect-deployment
         run: |
-          set -e
           TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
           if [ "$TYPE" = "error" ]; then
-            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
+            echo "❌ GitHub Pages is not configured. Please set up a deployment branch."
+            echo "🔗 https://github.com/$GITHUB_REPOSITORY/settings/pages"
             exit 1
           fi
           echo "type=$TYPE" >> $GITHUB_OUTPUT
-
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions/checkout@v4
         with:
           submodules: true
