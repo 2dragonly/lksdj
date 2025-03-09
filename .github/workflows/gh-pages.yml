@@ -1,10 +1,11 @@
 name: GitHub Pages Deployment
-
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths-ignore: ["**/README.md"]
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
 
 permissions:
   contents: write
@@ -16,13 +17,22 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
 
       - name: Detect deployment type
         id: detect-deployment
@@ -32,8 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build artifacts
-        if: steps.detect-deployment.outputs.type == 'workflow'
+      - name: Install and Build
         run: |
           pnpm install --frozen-lockfile
           pnpm run build --public-url /${{ github.event.repository.name }}
