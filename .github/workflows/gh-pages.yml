@@ -25,11 +25,12 @@ jobs:
     if: github.run_number != 1
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Environment
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -43,17 +44,19 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build --public-url /${{ github.event.repository.name }}
 
-      - name: Check and Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !github.event.repository.fork
+      - name: Check GitHub Pages Deployment Source
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
+          SOURCE=$(gh api /repos/$GITHUB_REPOSITORY/pages --jq '.build_type')
           if [ "$SOURCE" != "legacy" ]; then
-            echo "❌ ERROR: GitHub Pages is not set to deploy from a branch! Please update the settings to deploy from the correct branch."
-            echo "🔗 Enable it here: https://github.com/${{ github.repository }}/settings/pages (Scroll down to 'Build and Deployment > Source')"
+            echo "❌ ERROR: GitHub Pages is not set to deploy from a branch! Please update the settings."
+            echo "🔗 Enable it here: https://github.com/$GITHUB_REPOSITORY/settings/pages"
             exit 1
-      - uses: peaceiris/actions-gh-pages@v3
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
