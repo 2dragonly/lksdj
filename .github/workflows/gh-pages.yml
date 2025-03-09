@@ -22,6 +22,19 @@ jobs:
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
+      - name: Detect deployment type
+        id: detect-deployment
+        run: |
+          set -e
+          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
+          if [ "$TYPE" = "error" ]; then
+            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
+            exit 1
+          fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -33,14 +46,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - name: Detect deployment type
-        id: detect-deployment
-        run: |
-          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install and Build
         run: |
@@ -54,15 +59,12 @@ jobs:
 
   deploy-workflow:
     needs: build
-    if: needs.build.outputs.deployment-type == 'workflow'
+    if: success() && needs.build.outputs.deployment-type == 'workflow'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - name: Debug Build Output
-        run: ls -la
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
@@ -72,16 +74,13 @@ jobs:
 
   deploy-legacy:
     needs: build
-    if: needs.build.outputs.deployment-type == 'legacy'
+    if: success() && needs.build.outputs.deployment-type == 'legacy'
     runs-on: ubuntu-latest
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-
-      - name: Debug Build Output
-        run: ls -la
 
       - name: Extract artifact
         run: |
