@@ -3,8 +3,7 @@ name: Deploy to GitHub Pages
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths-ignore:
       - '**/README.md'
 
@@ -19,50 +18,53 @@ concurrency:
 
 jobs:
   build-deploy:
+    if: github.run_number != 1
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    if: github.run_number != 1
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Build
+      - name: Build Project
         run: pnpm run build --public-url /${{ github.event.repository.name }}
 
-      - name: Check and Deploy GitHub Pages
+      - name: Check GitHub Pages Source
+        id: deployment
         run: |
           SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
-          if [ "$SOURCE" != "workflow" ]; then
-            echo "⚠️ GitHub Pages is not set to use GitHub Actions."
-            echo "🔗 Enable it here: https://github.com/${{ github.repository }}/settings/pages (Scroll down to 'Build and Deployment > Source')"
-            exit 0
-          fi
-
-          echo "✅ GitHub Pages is correctly set to use GitHub Actions."
-
-          echo "🔧 Setting up GitHub Pages..."
-          gh workflow run actions/configure-pages@v5 --field enablement=true
-
-          echo "📤 Uploading Artifact..."
-          gh workflow run actions/upload-pages-artifact@v3 --field path=./dist
-
-          echo "🚀 Deploying to GitHub Pages..."
-          gh workflow run actions/deploy-pages@v4
+          echo "SOURCE=$SOURCE" >> $GITHUB_ENV
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy GitHub Pages
+        if: env.SOURCE == 'workflow'
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+      - uses: actions/deploy-pages@v4
+
+      - name: Deploy GitHub Pages (Legacy Source)
+        if: env.SOURCE == 'legacy'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          allow_empty_commit: true
+          force_orphan: true
