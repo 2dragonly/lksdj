@@ -75,5 +75,5 @@ jobs:
             gh run cancel $ID
             gh run watch $ID
             echo "Deleting workflow run ID: $ID"
-            gh run delete $ID --confirm
+            gh run delete $ID
           done
