@@ -12,6 +12,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -62,3 +63,14 @@ jobs:
           publish_dir: ./dist
           allow_empty_commit: true
           force_orphan: true
+
+      - name: Remove `pages-build-deployment` Actions
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_IDS=$(gh run list --workflow pages-build-deployment --json databaseId --jq '.[].databaseId')
+          for ID in $RUN_IDS; do
+            echo "Deleting workflow run ID: $ID"
+            gh run delete $ID --confirm
+          done
