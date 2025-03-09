@@ -75,6 +75,11 @@ jobs:
     if: needs.build.outputs.deployment-type == 'legacy'
     runs-on: ubuntu-latest
     steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: ./dist
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
