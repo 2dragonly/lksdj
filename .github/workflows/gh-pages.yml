@@ -25,27 +25,26 @@ jobs:
     if: github.run_number != 1
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Setup Environment
         uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
         with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          submodules: true
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install and Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build --public-url /${{ github.event.repository.name }}
 
-      - name: Run Build
-        run: pnpm run build --public-url /${{ github.event.repository.name }}
-
-      - name: Check GitHub Pages Source
+      - name: Check and Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
           if [ "$SOURCE" != "workflow" ]; then
@@ -54,19 +53,9 @@ jobs:
             exit 1
           fi
           echo "✅ GitHub Pages is correctly set to use GitHub Actions."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
+      - uses: peaceiris/actions-gh-pages@v3
         with:
-          enablement: true
-
-      - name: Upload Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          allow_empty_commit: true
+          force_orphan: true
