@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy GitHub Pages
+      - name: Deploy GitHub Pages (Workflow Source)
         if: env.SOURCE == 'workflow'
         uses: actions/configure-pages@v5
         with:
