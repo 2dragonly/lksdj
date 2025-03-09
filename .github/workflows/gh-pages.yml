@@ -86,7 +86,7 @@ jobs:
       - name: Extract artifact
         run: |
           mkdir -p dist
-          tar -xvf ./github-pages.tar -C dist
+          tar -xvf ./artifact.tar -C dist
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
