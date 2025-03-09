@@ -1,4 +1,4 @@
-name: GitHub Pages Deployment
+name: build-deploy
 on:
   workflow_dispatch:
   push:
@@ -47,8 +47,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build --public-url /${{ github.event.repository.name }}
 
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
   deploy-workflow:
-    name: Modern Deployment
     needs: build
     if: needs.build.outputs.deployment-type == 'workflow'
     runs-on: ubuntu-latest
@@ -62,17 +66,11 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
       - name: Deploy
         id: deploy
         uses: actions/deploy-pages@v4
 
   deploy-legacy:
-    name: Legacy Deployment
     needs: build
     if: needs.build.outputs.deployment-type == 'legacy'
     runs-on: ubuntu-latest
