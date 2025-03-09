@@ -22,6 +22,21 @@ jobs:
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
+      - name: Detect deployment type
+        uses: actions/github-script@v7
+        id: detect-deployment
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            try {
+              const response = await github.request('GET /repos/{owner}/{repo}/pages', { owner, repo });
+              const buildType = response.data.build_type;
+              core.setOutput('type', buildType);
+            } catch (error) {
+              core.setFailed('GitHub Pages is not configured. Please set up a deployment branch.');
+              core.notice(`https://github.com/${owner}/${repo}/settings/pages`);
+            }
+
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -33,19 +48,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-
-      - name: Detect deployment type
-        id: detect-deployment
-        run: |
-          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
-          if [ "$TYPE" = "error" ]; then
-            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
-            echo "::notice:: https://github.com/$GITHUB_REPOSITORY/settings/pages"
-            exit 1
-          fi
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install and Build
         run: |
