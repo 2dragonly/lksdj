@@ -9,10 +9,9 @@ on:
       - '**/README.md'
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
-  actions: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,52 +27,42 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 10
-      - uses: actions/setup-node@v4
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Install and Build
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build --public-url /${{ github.event.repository.name }}
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Check GitHub Pages Deployment Source
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Build
+        run: pnpm run build --public-url /${{ github.event.repository.name }}
+
+      - name: Check and Deploy GitHub Pages
         run: |
-          SOURCE=$(gh api /repos/$GITHUB_REPOSITORY/pages --jq '.build_type')
-          if [ "$SOURCE" != "legacy" ]; then
-            echo "❌ ERROR: GitHub Pages is not set to deploy from a branch! Please update the settings."
-            echo "🔗 Enable it here: https://github.com/$GITHUB_REPOSITORY/settings/pages"
-            exit 1
+          SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
+          if [ "$SOURCE" != "workflow" ]; then
+            echo "⚠️ GitHub Pages is not set to use GitHub Actions."
+            echo "🔗 Enable it here: https://github.com/${{ github.repository }}/settings/pages (Scroll down to 'Build and Deployment > Source')"
+            exit 0
           fi
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          allow_empty_commit: true
-          force_orphan: true
+          echo "✅ GitHub Pages is correctly set to use GitHub Actions."
 
-      - name: Stop and Remove `pages-build-deployment` Actions
-        if: success()
+          echo "🔧 Setting up GitHub Pages..."
+          gh workflow run actions/configure-pages@v5 --field enablement=true
+
+          echo "📤 Uploading Artifact..."
+          gh workflow run actions/upload-pages-artifact@v3 --field path=./dist
+
+          echo "🚀 Deploying to GitHub Pages..."
+          gh workflow run actions/deploy-pages@v4
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUN_IDS=$(gh run list --workflow pages-build-deployment --json databaseId --jq '.[].databaseId')
-          for ID in $RUN_IDS; do
-            echo "Canceling workflow run ID: $ID"
-            gh run cancel $ID
-            gh run watch $ID
-            echo "Deleting workflow run ID: $ID"
-            gh run delete $ID
-          done
