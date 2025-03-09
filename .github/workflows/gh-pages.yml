@@ -22,19 +22,6 @@ jobs:
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
     steps:
-      - name: Detect deployment type
-        id: detect-deployment
-        run: |
-          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
-          if [ "$TYPE" = "error" ]; then
-            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
-            echo "::warn:: https://github.com/$GITHUB_REPOSITORY/settings/pages"
-            exit 1
-          fi
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -46,6 +33,19 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+
+      - name: Detect deployment type
+        id: detect-deployment
+        run: |
+          TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
+          if [ "$TYPE" = "error" ]; then
+            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
+            echo "::notice:: https://github.com/$GITHUB_REPOSITORY/settings/pages"
+            exit 1
+          fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install and Build
         run: |
