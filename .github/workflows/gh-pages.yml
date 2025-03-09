@@ -27,8 +27,8 @@ jobs:
         run: |
           TYPE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type' 2>/dev/null || echo "error")
           if [ "$TYPE" = "error" ]; then
-            echo "❌ GitHub Pages is not configured. Please set up a deployment branch."
-            echo "🔗 https://github.com/$GITHUB_REPOSITORY/settings/pages"
+            echo "::error:: GitHub Pages is not configured. Please set up a deployment branch."
+            echo "::warn:: https://github.com/$GITHUB_REPOSITORY/settings/pages"
             exit 1
           fi
           echo "type=$TYPE" >> $GITHUB_OUTPUT
