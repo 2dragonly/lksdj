@@ -64,13 +64,14 @@ jobs:
           allow_empty_commit: true
           force_orphan: true
 
-      - name: Remove `pages-build-deployment` Actions
+      - name: Stop and Remove `pages-build-deployment` Actions
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_IDS=$(gh run list --workflow pages-build-deployment --json databaseId --jq '.[].databaseId')
           for ID in $RUN_IDS; do
-            echo "Deleting workflow run ID: $ID"
-            gh run delete $ID --confirm
-          done
+            echo "Canceling workflow run ID: $ID"
+            gh run cancel $ID
+            gh run watch $ID
+            ech
