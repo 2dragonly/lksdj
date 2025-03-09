@@ -50,7 +50,8 @@ jobs:
         run: |
           SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
           if [ "$SOURCE" != "workflow" ]; then
-            echo "❌ GitHub Pages is not set to use GitHub Actions. Current source: $SOURCE"
+            echo "❌ ERROR: GitHub Pages is not set to use GitHub Actions!"
+            echo "🔗 Enable it here: https://github.com/${{ github.repository }}/settings/pages#:~:text=Build%20and%20deployment-,Source,-Deploy%20from%20a"
             exit 1
           fi
           echo "✅ GitHub Pages is correctly set to use GitHub Actions."
