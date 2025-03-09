@@ -3,12 +3,13 @@ name: Deploy to GitHub Pages
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths-ignore:
       - '**/README.md'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,26 +19,30 @@ concurrency:
 
 jobs:
   build-deploy:
-    if: github.run_number != 1
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    if: github.run_number != 1
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
 
-      - name: Setup Node.js and pnpm
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install and Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build --public-url /${{ github.event.repository.name }}
 
       - name: Build Project
         run: pnpm run build --public-url /${{ github.event.repository.name }}
