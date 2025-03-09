@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       deployment-type: ${{ steps.detect-deployment.outputs.type }}
+    if: github.run_number != 1
     steps:
       - name: Detect deployment
         uses: actions/github-script@v7
