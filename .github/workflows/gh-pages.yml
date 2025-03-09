@@ -49,12 +49,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SOURCE=$(gh api /repos/${{ github.repository }}/pages --jq '.build_type')
-          if [ "$SOURCE" != "workflow" ]; then
-            echo "❌ ERROR: GitHub Pages is not set to use GitHub Actions!"
+          if [ "$SOURCE" != "legacy" ]; then
+            echo "❌ ERROR: GitHub Pages is not set to deploy from a branch! Please update the settings to deploy from the correct branch."
             echo "🔗 Enable it here: https://github.com/${{ github.repository }}/settings/pages (Scroll down to 'Build and Deployment > Source')"
             exit 1
           fi
-          echo "✅ GitHub Pages is correctly set to use GitHub Actions."
+          echo "✅ GitHub Pages is correctly set to deploy from a branch."
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
