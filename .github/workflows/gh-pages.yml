@@ -79,7 +79,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          path: ./dist
+
+      - name: Extract artifact
+        run: |
+          mkdir -p dist
+          tar -xvf ./github-pages.tar -C dist
+
+      - name: Debug Build Output
+        run: ls -la
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
