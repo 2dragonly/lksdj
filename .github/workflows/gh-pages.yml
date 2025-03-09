@@ -46,6 +46,15 @@ jobs:
       - name: Run Build
         run: pnpm run build --public-url /${{ github.event.repository.name }}
 
+      - name: Enable GitHub Pages
+        run: |
+          gh api --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/pages \
+            -f build_type=workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
         with:
