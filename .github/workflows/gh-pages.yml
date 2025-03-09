@@ -34,7 +34,7 @@ jobs:
               core.setOutput('type', buildType);
             } catch (error) {
               core.setFailed('GitHub Pages is not configured. Please set up a deployment branch.');
-              core.notice(`https://github.com/${owner}/${repo}/settings/pages`);
+              core.notice(`https://github.com/${owner}/${repo}/settings/pages#:~:text=from%20a%20branch-,Branch,-Make%20a%20commit`);
             }
 
       - uses: actions/checkout@v4
